@@ -19,24 +19,25 @@ class Client(asynchat.async_chat):
 		# while the rest use their variable name to override the default. 
 		# It's been intentionally written this way to make it easier to create the client connection.
 		# For more control, use the list below to pass more powerful parameters to the Class:
-		# nick     - String value - The nickname used by the client
-		# host     - String value - The IRC server address you wish to connect to
-		# port     - Number value - The IRC server port you wish to connect on
-		# password - String value - The password needed to connect to the IRC server
-		# ident    - String value - The identd used by the client
-		# realname - String value - The real name used by the client
-		# modes    - String value - The clients modes you wish to set after it connects
-		#                           Example: modes="+xi"
-		# channels - String value - The channel(s) the client joins after it connects
-		#                           Multiple channels can be joined at once by seperating
-		#                           them with a comma.
-		#                           Example: channels="#Home, #Start,#Help"
-		# parser  - Function name - This is where you hook into the client's parser with an
-		#                           external function of your own within your script. 
-		#                           Check out the parse function below an example.py for
-		#                           examples of how to use it.
-		# debug   - True or False - Prints debug messages to the terminal screen when set to 
-		#                           True. Useful for debugging if you can't tell by the name.                            
+		# nick      - String value - The nickname used by the client
+		# host      - String value - The IRC server address you wish to connect to
+		# port      - Number value - The IRC server port you wish to connect on
+		# password  - String value - The password needed to connect to the IRC server
+		# ident     - String value - The identd used by the client
+		# realname  - String value - The real name used by the client
+		# modes     - String value - The clients modes you wish to set after it connects
+		#                            Example: modes="+xi"
+		# channels  - String value - The channel(s) the client joins after it connects
+		#                            Multiple channels can be joined at once by seperating
+		#                            them with a comma.
+		#                            Example: channels="#Home, #Start,#Help"
+		# parser    - Function name - This is where you hook into the client's parser with an
+		#                             external function of your own within your script. 
+		#                             Check out the parse function below an example.py for
+		#                             examples of how to use it.
+		# reconnect - True or False - Allows the client to reconnect on Ping Timeouts or Kills. 
+		# debug     - True or False - Prints debug messages to the terminal screen when set to 
+		#                             True. Useful for debugging purposes.                            
 		asynchat.async_chat.__init__(self)
 		self.buffer = ""
 		self.set_terminator("\r\n")
@@ -117,6 +118,7 @@ class Client(asynchat.async_chat):
 	def quit(self, msg=None):
 		# Alias to quit the IRC Server with an optional message
 		# It also closes the socket for the client
+		# This is uneffect by the auto-reconnect feature
 		if msg: self.write("QUIT :%s" % msg)
 		else: self.write("QUIT :Shutting down")
 		self.close()
@@ -212,6 +214,7 @@ class Server(asynchat.async_chat):
 		#                          with an external function of your own within your script. 
 		# parser - Function name - This is where you hook into the server's parser with an
 		#                           external function of your own within your script. 
+		# reconnect - True or False - Allows the server to reconnect on SQUIT or Ping Timeout. 
 		# debug  - True or False - Prints debug messages to the terminal screen when set to 
 		#                         True. Useful for debugging if you can't tell by the name.    
 		asynchat.async_chat.__init__(self)   
@@ -247,6 +250,8 @@ class Server(asynchat.async_chat):
 		# * line[3] - This is the first word sent by PRIVMSG or NOTICE - normally used for commands
 		#             Use line[3:] to get all the text sent by PRIVMSG or NOTICE
 		# * line[4:] - The rest of the PRIVMSG or NOTICE - normally used for the command args
+		# Please Note: Using line[3:] and line[4:] will slice the list - you need to join it to make
+		#              a proper string value.
 		if self.debug: print " ".join(line)
 		if line[0] == "PING": self.write("PONG %s" % line[1])
 		if self.parser: self.parser(self, line)
