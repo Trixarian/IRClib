@@ -8,7 +8,7 @@ import socket, asyncore, asynchat, re
 
 class Client(asynchat.async_chat):
 	def __init__(self, nick="IRCTest", host="localhost", port=6667, password=None, ident="irc", 
-				 realname="N/A", modes=None, channels=None, parser=None, debug=False):
+				 realname="N/A", modes=None, channels=None, parser=None, reconnect=False, debug=False):
 		# Each value has a default and it's completely possible to initialize the class
 		# without any parameters, but all that does is create an IRC client that idles on
 		# your localhost IRC Server and sends PING replies. That's not very useful now, is it?
@@ -37,7 +37,7 @@ class Client(asynchat.async_chat):
 		#                           examples of how to use it.
 		# debug   - True or False - Prints debug messages to the terminal screen when set to 
 		#                           True. Useful for debugging if you can't tell by the name.                            
-		asynchat.async_chat.__init__(self)   
+		asynchat.async_chat.__init__(self)
 		self.buffer = ""
 		self.set_terminator("\r\n")
 		self.nick = nick
@@ -48,8 +48,9 @@ class Client(asynchat.async_chat):
 		self.realname = realname
 		self.modes = modes
 		self.channels = channels
-		self.debug = debug
 		self.parser = parser
+		self.reconnect = reconnect
+		self.debug = debug
 		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.connect((self.host, self.port))
 		asyncore.loop()
@@ -61,9 +62,12 @@ class Client(asynchat.async_chat):
 
 	def word_wrap(self, msg):
 		# Splits the messages into chunks of 450 characters split by words
+		# It can handle string lists and normal strings ;)
 		lines = []
 		line = ""
 		count = 0
+		try: msg = msg.split()
+		except: pass
 		for word in msg:
 			line = line+word+" "
 			count = count+1
@@ -81,16 +85,19 @@ class Client(asynchat.async_chat):
 
 	def msg(self, target, msg):
 		# Alias to send messages to an IRC channel or user
+		# Works with string lists and normal string values
 		for line in self.word_wrap(msg):
 			self.write("PRIVMSG %s :%s" % (target, line.strip())) 
 
 	def notice(self, target, msg):
 		# Alias to send notices to an IRC channel or user
+		# Works with string lists and normal string values
 		for line in self.word_wrap(msg):
 			self.write("NOTICE %s :%s" % (target, line.strip()))
 
 	def act(self, target, msg):
 		# Alias to send /me actions to an IRC channel or user
+		# Works with string lists and normal string values
 		for line in self.word_wrap(msg):
 			self.write("PRIVMSG %s :\001ACTION %s\001" % (target, line.strip()))
 
@@ -146,10 +153,12 @@ class Client(asynchat.async_chat):
 		# * line[1] - Numerics and IRC Commands sent by another user
 		# * line[2] - With PRIVMSG or NOTICE this where the channel is located with channel messages
 		#             or your nickname if it's a private conversion
-		#			  See example.py for how to grab the correct target
+		#             See example.py for how to grab the correct target
 		# * line[3] - This is the first word sent by PRIVMSG or NOTICE - normally used for commands
 		#             Use line[3:] to get all the text sent by PRIVMSG or NOTICE
 		# * line[4:] - The rest of the PRIVMSG or NOTICE - normally used for the command args
+		# Please Note: Using line[3:] and line[4:] will slice the list - you need to join it to make
+		#              a proper string value.
 		if self.debug: print " ".join(line)
 		if line[0] == "PING": self.write("PONG %s" % line[1])
 		if line[1] == "005":
@@ -167,7 +176,7 @@ class Client(asynchat.async_chat):
 		self.write("NICK %s" % self.nick)
 		self.write("USER %s 0 0 :%s" % (self.ident, self.realname))
 		if self.password: self.write("PASS %s" % self.password)
-	 
+
 	def collect_incoming_data(self, data):
 		self.buffer += data
 
@@ -176,9 +185,26 @@ class Client(asynchat.async_chat):
 		self.parse(self.clean(self.buffer))
 		self.buffer = ""
 
+	## Code to handle auto-reconnecting: ##
+	def handle_error(self):
+		if self.reconnect:
+			if self.debug: print "Disconnected. Restarting Connection..."
+			asynchat.async_chat.__init__(self)
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.connect((self.host, self.port))
+		else: self.close()
+
+	def handle_close(self):
+		if self.reconnect:
+			if self.debug: print "Disconnected. Restarting Connection..."
+			asynchat.async_chat.__init__(self)
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.connect((self.host, self.port))
+		else: self.close()
+
 
 class Server(asynchat.async_chat):
-	def __init__(self, host="localhost", port=6667, intro=None, parser=None, debug=False):
+	def __init__(self, host="localhost", port=6667, intro=None, parser=None, reconnect=False, debug=False):
 		# Works much like Client(), but with fewer options:
 		# host   - String value - The IRC server address you wish to connect to
 		# port   - Number value - The IRC server port you wish to connect on
@@ -193,9 +219,10 @@ class Server(asynchat.async_chat):
 		self.set_terminator("\r\n")
 		self.host = host
 		self.port = port
-		self.debug = debug
 		self.intro = intro
 		self.parser = parser
+		self.reconnect = reconnect
+		self.debug = debug
 		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.connect((self.host, self.port))
 		asyncore.loop()
@@ -238,3 +265,20 @@ class Server(asynchat.async_chat):
 		# Cleans the buffer string of unwanted parts and turns it into a list
 		self.parse(Client.clean(self.buffer))
 		self.buffer = ""
+
+	## Code to handle auto-reconnecting: ##
+	def handle_error(self):
+		if self.reconnect:
+			if self.debug: print "Disconnected. Restarting Connection..."
+			asynchat.async_chat.__init__(self)
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.connect((self.host, self.port))
+		else: self.close()
+
+	def handle_close(self):
+		if self.reconnect:
+			if self.debug: print "Disconnected. Restarting Connection..."
+			asynchat.async_chat.__init__(self)
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.connect((self.host, self.port))
+		else: self.close()
