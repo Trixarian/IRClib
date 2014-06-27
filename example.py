@@ -8,7 +8,7 @@ from irclib import Client as irc
 
 base_nick = "AsyncBot"
 host = "localhost"
-channel = "#Zen"
+chan = "#Zen"
 
 # The first parameter passed to the parser is always the socket object
 # The second parameter is the raw data in the form of a list
@@ -33,11 +33,11 @@ def parser(me, line):
     if cmd == "!new" and me.nick == base_nick:
 	# Creating new clients is as simple as running the class again!
 	tnum = random.randint(1, 999)
-	irc("%s%d" % (base_nick, tnum), host, channels=channel, parser=parser, debug=True)
-    if cmd == "!say" and me.nick== base_nick:
+	irc("%s%d" % (base_nick, tnum), host, chans=chan, parser=parser, debug=True)
+    if cmd == "!say" and me.nick == base_nick:
 	me.msg(target, args)
     if cmd == "!quit":
 	me.quit()
 
 # Initialize
-irc(base_nick, host, channels=channel, parser=parser, debug=True)
+irc(base_nick, host, chans=chan, parser=parser, debug=True)

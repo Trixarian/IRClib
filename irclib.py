@@ -1,17 +1,42 @@
 #!/usr/bin/python
 #####################################
 # Trixar_za's IRClib
-# The low-level IRC Protocol Wrapper
-# with minimal abstraction for
-# Advanced IRC users
 # By Brenton Edgar Scott
 # Released under the CC0 License
 #####################################
 import socket, asyncore, asynchat, re
 
 class Client(asynchat.async_chat):
-	def __init__(self, nick="TestClient", host="localhost", port=6667, password=None, ident="irc", 
-				 realname="Awesomeness", modes=None, channels=None, parser=None, debug=False):
+	def __init__(self, nick="IRCTest", host="localhost", port=6667, password=None, ident="irc", 
+				 realname="N/A", modes=None, channels=None, parser=None, debug=False):
+		# Each value has a default and it's completely possible to initialize the class
+		# without any parameters, but all that does is create an IRC client that idles on
+		# your localhost IRC Server and sends PING replies. That's not very useful now, is it?
+		# Instead pass some parameters to the class like this:
+		# Client("IRCer", "irc.network.com", channels="#Home,#Awesome" parser=irc_parser)
+		#
+		# As you can see, the first to parameters are the IRC Nickname and the IRC Server Address,
+		# while the rest use their variable name to override the default. 
+		# It's been intentionally written this way to make it easier to create the client connection.
+		# For more control, use the list below to pass more powerful parameters to the Class:
+		# nick     - String value - The nickname used by the client
+		# host     - String value - The IRC server address you wish to connect to
+		# port     - Number value - The IRC server port you wish to connect on
+		# password - String value - The password needed to connect to the IRC server
+		# ident    - String value - The identd used by the client
+		# realname - String value - The real name used by the client
+		# modes    - String value - The clients modes you wish to set after it connects
+		#                           Example: modes="+xi"
+		# channels - String value - The channel(s) the client joins after it connects
+		#                           Multiple channels can be joined at once by seperating
+		#                           them with a comma.
+		#                           Example: channels="#Home, #Start,#Help"
+		# parser  - Function name - This is where you hook into the client's parser with an
+		#                           external function of your own within your script. 
+		#                           Check out the parse function below an example.py for
+		#                           examples of how to use it.
+		# debug   - True or False - Prints debug messages to the terminal screen when set to 
+		#                           True. Useful for debugging if you can't tell by the name.                            
 		asynchat.async_chat.__init__(self)   
 		self.buffer = ""
 		self.set_terminator("\r\n")
@@ -30,6 +55,7 @@ class Client(asynchat.async_chat):
 		asyncore.loop()
 
 	def write(self, text):
+		# This sends data to the socket
 		if self.debug: print "SENT: %s" % text
 		self.push(text + "\r\n")
 
@@ -54,28 +80,36 @@ class Client(asynchat.async_chat):
 		self.write(text)
 
 	def msg(self, target, msg):
+		# Alias to send messages to an IRC channel or user
 		for line in self.word_wrap(msg):
 			self.write("PRIVMSG %s :%s" % (target, line.strip())) 
 
 	def notice(self, target, msg):
+		# Alias to send notices to an IRC channel or user
 		for line in self.word_wrap(msg):
 			self.write("NOTICE %s :%s" % (target, line.strip()))
 
 	def act(self, target, msg):
+		# Alias to send /me actions to an IRC channel or user
 		for line in self.word_wrap(msg):
 			self.write("PRIVMSG %s :\001ACTION %s\001" % (target, line.strip()))
 
 	def mode(self, target, modes):
+		# Alias to set modes on yourself or a IRC channel
 		self.write("MODE %s %s" % (target, modes))
 
 	def join(self, chan):
+		# Alias to join an IRC Channel
 		self.write("JOIN %s" % chan)
 
 	def part(self, chan, msg=None):
+		# Alias to part/leave an IRC Channel with an optional message
 		if msg: self.write("PART %s :%s" % (chan, msg))
 		else: self.write("PART %s" % chan)
 
 	def quit(self, msg=None):
+		# Alias to quit the IRC Server with an optional message
+		# It also closes the socket for the client
 		if msg: self.write("QUIT :%s" % msg)
 		else: self.write("QUIT :Shutting down")
 		self.close()
@@ -145,6 +179,15 @@ class Client(asynchat.async_chat):
 
 class Server(asynchat.async_chat):
 	def __init__(self, host="localhost", port=6667, intro=None, parser=None, debug=False):
+		# Works much like Client(), but with fewer options:
+		# host   - String value - The IRC server address you wish to connect to
+		# port   - Number value - The IRC server port you wish to connect on
+		# intro  - Function name - This is where you hook into the server's intro sequence
+		#                          with an external function of your own within your script. 
+		# parser - Function name - This is where you hook into the server's parser with an
+		#                           external function of your own within your script. 
+		# debug  - True or False - Prints debug messages to the terminal screen when set to 
+		#                         True. Useful for debugging if you can't tell by the name.    
 		asynchat.async_chat.__init__(self)   
 		self.buffer = ""
 		self.set_terminator("\r\n")
