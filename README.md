@@ -4,10 +4,10 @@ IRClib
 IRClib is a Portable Multi-Client Asynchronous Python IRC library with minimal protocol abstraction.
 
 
-Why use yet another IRC lib?
-----------------------------
+Why make another IRC lib?
+-------------------------
 
-If you tried other IRC libraries before, you may haved found that most didn't work with all IRCd or some were too dependecy heavy to make scripts written with it easy to port from system to system. Another problem you may have noticed is that that all the other libraries rely too much on abstraction - even to the point of making writing a quick IRCBot script a small mine field of finding what something is called within it.
+If you tried other IRC libraries before, you may have found that most didn't work with all IRCds or some were way too dependency heavy to make scripts written with it easy to port from system to system. Another problem you may have noticed is that that all the other libraries rely too much on abstraction - even to the point of making writing a quick IRCBot script a small mine field of finding what something is called within it.
 
 That's why I wanted something that could generate as many clients as needed, as simply as possibe without getting in the way. This is the result. In fact, you can generate a simple IRC client that joins a channel in two lines of code. This may sound impressive, but using a simple for each loop, you can essentially add as many IRC clients as you want in those two lines too. Sounds way more interesting now, doesn't it?
 
